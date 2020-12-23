@@ -19,15 +19,16 @@ AWS-S3. Kubernetes cluster and AWS services are running in local node filesystem
 
 ### Step-1. To build 4-node local kubernetes cluster
 This step builds a multi-node kubernetes cluster managed by vagrant and hosted within 
-VirtualBox VMs.Run the following commands (make sure that docker is running) -
+VirtualBox VMs. Run (make sure that docker is running): -
 
-    cd vagrant-kubeadm
+    cd [spark-kubernetes-aws folder]/vagrant-kubeadm
     vagrant up
 
 #### Notes
-1. This takes longer to build the 4 nodes kubernetes cluster. You can modify the 
-number of nodes in the kubernetes cluster by modifying the NUM_NODE value in the 
-`Vagrantfile` located at `vagrant-kubeadm` folder.
+1. This might take a long time to build the 4 nodes (master, node-1, node-2, node-3) 
+   kubernetes cluster. Take a break and come back. You can modify the number of 
+   nodes in the kubernetes cluster by modifying the NUM_NODE value in the 
+   `Vagrantfile` located at `vagrant-kubeadm` folder.
    
 2. Kubernetes master is running at https://192.168.26.10:6443
 
@@ -36,10 +37,11 @@ number of nodes in the kubernetes cluster by modifying the NUM_NODE value in the
 4. The `kube.config` file is created and located at `vagrant-kubeadm` folder. Please 
    export the `KUBECONFIG` env variable and set the value to the `kube.config` path -
    
-        export KUBECONFIG=[vagrant-kubeadm]/kube.config
+        export KUBECONFIG=[spark-kubernetes-aws folder]/vagrant-kubeadm/kube.config
 
 5. Test the cluster by running following `vagrant` and `kubectl` commands -
    
+        cd [spark-kubernetes-aws folder]/vagrant-kubeadm
         vagrant status
         kubectl cluster-info
         kubectl get nodes
@@ -47,10 +49,12 @@ number of nodes in the kubernetes cluster by modifying the NUM_NODE value in the
 
 6. To shut-down (& store the changes) the cluster, please run:
 
+        cd [spark-kubernetes-aws folder]/vagrant-kubeadm
         vagrant pause
    
 7. To restart the cluster, please run:
 
+        cd [spark-kubernetes-aws folder]/vagrant-kubeadm
         vagrant up
 
 ### Step-2: To set up a docker registry in local machine
@@ -75,8 +79,9 @@ This step allows the kubernetes nodes hosted within VirtualBox VMs to access loc
 docker registry with ip = `10.0.2.2`. Execute the following steps for each Kubernetes 
 nodes (master, node-1, node-2, node-3) -
 
-1. Log in via ssh to the node. Run:
+1. Log in to master node via ssh. Run:
    
+        cd [spark-kubernetes-aws folder]/vagrant-kubeadm
         vagrant ssh master
 
 2. Set the `DOCKER_OPTS=--config-file=/etc/docker/daemon.json` within 
@@ -94,7 +99,24 @@ nodes (master, node-1, node-2, node-3) -
 
         sudo service docker restart
 
-### Step-4:
+5. Run 1-4 for node-1, node-2 & node-3.
+
+### Step-4: To build and publish Spark docker image
+This step builds a Spark docker images for Kubernetes and publish it to the local 
+docker registry. Run:
+
+    cd [Spark-installation-folder]
+    docker build -t spark:latest -f kubernetes/dockerfiles/spark/Dockerfile .
+    docker tag spark localhost:5000/spark
+    docker push localhost:5000/spark
+
+#### Notes:
+1. You can test to pull the Spark docker image from any Kubernetes node. Run:
+   
+        cd [spark-kubernetes-aws folder]/vagrant-kubeadm
+        vagrant ssh master
+        sudo docker pull 10.0.2.2:5000/spark
+        sudo docker images
 
 
 
