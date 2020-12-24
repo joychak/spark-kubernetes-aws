@@ -29,8 +29,8 @@ VirtualBox VMs. Run (make sure that docker is running): -
     cd [spark-kubernetes-aws folder]/vagrant-kubeadm
     vagrant up
 
-    # Please modify the Vagrantfile if your laptop is running within corporate 
-    # domain network behind firewall and using proxy server to access internet
+    # Please modify the Vagrantfile (accordingly) if your laptop is running within corporate 
+    # domain network behind firewall and using proxy server to access internet.
 
 #### Notes
 1. This might take a long time to build the 4 nodes (master, node-1, node-2, node-3) 
