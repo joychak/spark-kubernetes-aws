@@ -14,6 +14,7 @@ AWS-S3. Kubernetes cluster and AWS services are running in local node filesystem
     6. SBT (1.4.5) - Optional (can use Maven)
     7. Spark (spark-3.0.1-bin-hadoop3.2)
     8. kubectl 
+    9. awscli (2.1.13)
 
 ## Environment Setup Steps
 
@@ -179,6 +180,53 @@ within the `localhost:5000/spark` docker image (build in step-5) and
         kubectl delete [driver-pod-name] [driver-service-name]
 
 ### Step-7: To deploy local AWS S3 service
+This step deploys LocalStack (available at https://github.com/localstack/localstack), 
+a local mock deployment of fully functional local AWS cloud stack. This project only 
+requires S3 service, but you can enable other AWS services (if required). 
 
+#### Why we need S3?
+Launching a Spark job (`spark-submit` command) requires an application jar which should
+be accessible from the kubernetes node (or pod) running the driver program. The spark
+job is submitted from local host (laptop) machine and kubernetes pod doesnt have access
+to the local host resources. At same time, you can't deploy the application jar to the
+kubernetes pod running driver program because it is ephemeral. So, S3 storage can be 
+used as a repository solution to deploy application jar which is hosted outside kubernetes 
+cluster. You can use other repository solution such as Artifactory.
+
+Additionally, the Spark job can read input data from and write output to files stored 
+in S3 bucket. This is one of the popular cloud storage solution.
+
+#### To Start a docker container running LocalStack mocking AWS-S3
+
+1.  Setup AWS credentials. Execute the following command and set `aws_access_key_id=123`, 
+    `aws_secret_access_key=xyz` and `region = us-east-1` -
+    
+        aws configure 
+        # Config & credential file will be created under ~/.aws folder
+
+2.  Create and start a docker container running LocalStack. Run:
+
+        cd [spark-kubernetes-aws folder]/aws-localStack
+        docker-compose -f ./docker-compose-localstack.yml up -d
+
+#### Notes:
+
+1.  Open browser to test the S3 bucket UI using URL = http://localhost:8055/. The UI 
+    dashboard should be empty initially because no bucket has been created yet.
+    
+2.  Create a test S3 bucket by executing the following command -
+
+        aws --endpoint-url=http://localhost:4566 s3 mb s3://test-bucket
+
+3. You can refresh the UI to see the newly created S3 bucket or list the bucket and
+   it's content by executing the following command -
+   
+        aws --endpoint-url=http://localhost:4566 s3 ls s3://test-bucket
+
+4. You can optionally delete the LocalStack docker container. Run:
+
+        docker-compose -f ./docker-compose-localstack.yml down --volumes --remove-orphans
+
+### Step-8: To run a Spark application within Kubernetes cluster reading data from AWS S3
 
 ## To be continued ... Not done yet ....
