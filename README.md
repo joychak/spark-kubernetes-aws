@@ -1,9 +1,13 @@
-# Local Development - Kubernetes cluster running Spark accessing AWS
+# Local Development - Kubernetes cluster running Spark accessing AWS S3
 
 The purpose of this repo is to build a local (laptop based local node filesystem) 
 multi-node (4 nodes) Kubernetes cluster running spark jobs accessing files from 
-AWS-S3. Kubernetes cluster and AWS services are running in local node filesystem 
-(macOS laptop).
+AWS-S3. Kubernetes cluster and AWS services are running in single-host local node 
+filesystem (macOS laptop). 
+
+The motivation for this project is to build a local Spark/Kubernetes/AWS-S3 development 
+setup to test `Distributed and Cloud Computing` technologies without using any cluster 
+and cloud resources. 
 
 ## Software prerequisites
     1. VirtualBox (6.1)
@@ -24,6 +28,9 @@ VirtualBox VMs. Run (make sure that docker is running): -
 
     cd [spark-kubernetes-aws folder]/vagrant-kubeadm
     vagrant up
+
+    # Please modify the Vagrantfile if your laptop is running within corporate 
+    # domain network behind firewall and using proxy server to access internet
 
 #### Notes
 1. This might take a long time to build the 4 nodes (master, node-1, node-2, node-3) 
