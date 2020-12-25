@@ -119,7 +119,7 @@ nodes (master, node-1, node-2, node-3) -
 
         sudo service docker restart
 
-5. Run 1-4 for node-1, node-2 & node-3.
+5. Repeat previous 4 steps (1-4) for node-1, node-2 & node-3.
 
 ### Step-5: To build and publish Spark docker image
 This step builds a Spark docker images for Kubernetes and publish it to the local 
