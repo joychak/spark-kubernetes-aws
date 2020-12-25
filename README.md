@@ -20,7 +20,7 @@ and cloud resources.
     8. kubectl 
     9. awscli (2.1.13)
 
-## Environment Setup Steps
+## Environment Setup and Testing Steps
 
 ### Step-1. Clone this repository to you local machine
 Run:
@@ -151,7 +151,7 @@ account is required with right role granted.
 
         kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=default:spark --namespace=default
 
-### Step-7 (optional): To test running Spark job in Kubernetes cluster
+### Step-7 (optional): To test a Spark job running in Kubernetes cluster
 This step is to test (optionally) the local Kubernetes cluster running a sample Spark 
 job. You can use the `SparkPi` program within `spark-examples_X.Y.Z.jar` that gets
 installed during Spark deployment. Please note: Spark is deployed at `/opt/spark/` path
@@ -199,15 +199,16 @@ a local mock deployment of fully functional local AWS cloud stack. This project 
 requires S3 service, but you can enable other AWS services (if required). 
 
 #### Why we need S3?
-Launching a Spark job (`spark-submit` command) requires an application jar which should
+Launching a Spark job (`spark-submit` command) requires an application jar which shall
 be accessible from the kubernetes node (or pod) running the driver program. The spark
-job is submitted from local host (laptop) machine and kubernetes pod doesnt have access
-to the local host resources. At same time, you can't deploy the application jar to the
-kubernetes pod running driver program because it is ephemeral. So, S3 storage can be 
-used as a repository solution to deploy application jar which is hosted outside kubernetes 
-cluster. You can use other repository solution such as Artifactory.
+job is submitted from local host machine (laptop), but the Kubernetes pod doesn't have 
+access to the local host resources. At same time, you can't deploy the application jar 
+to the Kubernetes pod running driver program because it is ephemeral. So, S3 storage can 
+be used as a repository to deploy application jar which is hosted outside kubernetes 
+cluster but accessible by the cluster nodes. You can use other repository solution such 
+as Artifactory.
 
-Additionally, the Spark job can read input data from and write output to files stored 
+Additionally, the Spark job can read input data from a file and write output to file stored 
 in S3 bucket. This is one of the popular cloud storage solution.
 
 #### To Start a docker container running LocalStack mocking AWS-S3
@@ -232,9 +233,8 @@ in S3 bucket. This is one of the popular cloud storage solution.
 1.  Open browser to test the S3 bucket UI using URL = http://localhost:8055/. The UI 
     dashboard should be empty initially because no bucket has been created yet.
     
-2. You can refresh the UI after creating the `test-bucket` bucket to see the newly 
-   created S3 bucket or list the bucket and it's content by executing the following 
-   command -
+2. You can refresh the UI after creating the `test-bucket` bucket to list the bucket, 
+   and it's content by executing the following command -
    
         aws --endpoint-url=http://localhost:4566 s3 ls s3://test-bucket
 
@@ -244,7 +244,7 @@ in S3 bucket. This is one of the popular cloud storage solution.
 
 ### Step-9: To build a Spark application reading data from AWS S3
 This step builds a Spark application that reads a file from stored in S3 bucket and 
-calcuates the word count. 
+calculates the word count. 
 
 1. The Scala project source code for a Spark application that reads a file stored 
    in S3 bucket and performs word count is available at 
@@ -271,16 +271,17 @@ accessible from Kubernetes cluster.
          cd [spark-kubernetes-aws folder]/spark-example
          aws --endpoint-url=http://localhost:4566 s3 cp spark-example/target/scala-2.12/spark-example-assembly-0.1.jar s3://test-bucket
 
-2. Deploy the AWS dependency JARs. This appplication reads data from AWS S3 bucket. 
-   Therefore, it needs `aws-java-sdk-bundle` (https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-bundle) 
-   and `hadoop-aws` (https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-aws) 
-   dependencies because these are not part of Spark distribution. You can download these 
-   jars from Maven repository to your local machine. However, these jars are available
-   at `[spark-kubernetes-aws folder]/spark-example/aws-jars` folder. To deploy, run:
+2. Deploy the AWS dependency JARs. This application reads data from AWS S3 bucket. 
+   Therefore, it needs `aws-java-sdk-bundle` (https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-bundle/1.11.874) 
+   and `hadoop-aws` (https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-aws/3.2.0) 
+   dependencies because these are not part of Spark distribution. Please download these 
+   jars from Maven repository to your local machine. To download and deploy, run:
    
          cd [spark-kubernetes-aws folder]
-         aws --endpoint-url=http://localhost:4566 s3 cp spark-example/aws-jars/aws-java-sdk-bundle-1.11.874.jar s3://test-bucket
-         aws --endpoint-url=http://localhost:4566 s3 cp spark-example/aws-jars/hadoop-aws-3.2.0.jar s3://test-bucket
+         wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.874/aws-java-sdk-bundle-1.11.874.jar
+         wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
+         aws --endpoint-url=http://localhost:4566 s3 cp aws-java-sdk-bundle-1.11.874.jar s3://test-bucket
+         aws --endpoint-url=http://localhost:4566 s3 cp hadoop-aws-3.2.0.jar s3://test-bucket
    
 #### Notes:
 
@@ -291,8 +292,8 @@ accessible from Kubernetes cluster.
          aws --endpoint-url=http://localhost:4566 s3 ls s3://test-bucket
 
 ### Step-11: To run the WordCount Spark application
-This steps run the Spark application within Kubernetes cluster that reads the input data
-from file stored in AWS S3 bucket.
+This step runs the Spark application within Kubernetes cluster that reads the input data
+from a file stored in AWS S3 bucket.
 
 1. Deploy any text file to the `test-bucket` S3 bucket. The Scala source code is designed
    to read a file at `s3a://test-bucket/Vagrantfile`. You can change it by editing the 
@@ -347,4 +348,4 @@ from file stored in AWS S3 bucket.
         kubectl delete [driver-pod-name] [driver-service-name]
 
 
-## That's it ... Hopefully, you should be now able to continue your Kubernetes/Spark/AWS development in local machine (Laptop) !!!
+## That's it ... Hopefully, you should be now able to continue your Kubernetes/Spark/AWS development in a local machine (Laptop) !!!
