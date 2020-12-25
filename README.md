@@ -22,7 +22,14 @@ and cloud resources.
 
 ## Environment Setup Steps
 
-### Step-1. To build 4-node local kubernetes cluster
+### Step-1. Clone this repository to you local machine
+Run:
+   
+      git clone https://github.com/joychak/spark-kubernetes-aws.git
+      cd spark-kubernetes-aws 
+      #change directory to the root of this repo
+
+### Step-2. To build 4-node local kubernetes cluster
 This step builds a multi-node kubernetes cluster managed by vagrant and hosted within 
 VirtualBox VMs. Run (make sure that docker is running): -
 
@@ -70,7 +77,7 @@ VirtualBox VMs. Run (make sure that docker is running): -
 8. Each Kubernetes nodes has 1 CPU and 2 GB memory assigned. You can change the memory by 
    modifying line#98, `vb.memory = "2048"` within `Vagrantfile` located at `vagrant-kubeadm` folder.
 
-### Step-2: To set up a docker registry in local machine
+### Step-3: To set up a docker registry in local machine
 This step will set up a docker registry to host docker images accessible by the 
 Kubernetes cluster nodes while creating kubernetes container (pod) using docker. Run:
 
@@ -87,7 +94,7 @@ Kubernetes cluster nodes while creating kubernetes container (pod) using docker.
 
         docker container stop docker-registry && docker container rm -v docker-registry
 
-### Step-3: To change the docker setting within kubernetes nodes to access local docker registry
+### Step-4: To change the docker setting within kubernetes nodes to access local docker registry
 This step allows the kubernetes nodes hosted within VirtualBox VMs to access local
 docker registry with ip = `10.0.2.2`. Execute the following steps for each Kubernetes 
 nodes (master, node-1, node-2, node-3) -
@@ -114,7 +121,7 @@ nodes (master, node-1, node-2, node-3) -
 
 5. Run 1-4 for node-1, node-2 & node-3.
 
-### Step-4: To build and publish Spark docker image
+### Step-5: To build and publish Spark docker image
 This step builds a Spark docker images for Kubernetes and publish it to the local 
 docker registry. Run:
 
@@ -131,7 +138,7 @@ docker registry. Run:
         sudo docker pull 10.0.2.2:5000/spark
         sudo docker images
 
-### Step-5: To create kubernetes service account and role for Spark jobs
+### Step-6: To create kubernetes service account and role for Spark jobs
 The default Kubernetes service account do not have the role that allows driver pods 
 to create pods and services under the default Kubernetes RBAC policies. A custom service
 account is required with right role granted.
@@ -144,7 +151,7 @@ account is required with right role granted.
 
         kubectl create clusterrolebinding spark-role --clusterrole=edit --serviceaccount=default:spark --namespace=default
 
-### Step-6 (optional): To test running Spark job in Kubernetes cluster
+### Step-7 (optional): To test running Spark job in Kubernetes cluster
 This step is to test (optionally) the local Kubernetes cluster running a sample Spark 
 job. You can use the `SparkPi` program within `spark-examples_X.Y.Z.jar` that gets
 installed during Spark deployment. Please note: Spark is deployed at `/opt/spark/` path
@@ -186,7 +193,7 @@ within the `localhost:5000/spark` docker image (build in step-5) and
    
         kubectl delete [driver-pod-name] [driver-service-name]
 
-### Step-7: To deploy local AWS S3 service
+### Step-8: To deploy local AWS S3 service
 This step deploys LocalStack (available at https://github.com/localstack/localstack), 
 a local mock deployment of fully functional local AWS cloud stack. This project only 
 requires S3 service, but you can enable other AWS services (if required). 
@@ -216,24 +223,128 @@ in S3 bucket. This is one of the popular cloud storage solution.
         cd [spark-kubernetes-aws folder]/aws-localStack
         docker-compose -f ./docker-compose-localstack.yml up -d
 
+3.  Create a test S3 bucket by executing the following command - 
+    
+         aws --endpoint-url=http://localhost:4566 s3 mb s3://test-bucket
+
 #### Notes:
 
 1.  Open browser to test the S3 bucket UI using URL = http://localhost:8055/. The UI 
     dashboard should be empty initially because no bucket has been created yet.
     
-2.  Create a test S3 bucket by executing the following command -
-
-        aws --endpoint-url=http://localhost:4566 s3 mb s3://test-bucket
-
-3. You can refresh the UI to see the newly created S3 bucket or list the bucket and
-   it's content by executing the following command -
+2. You can refresh the UI after creating the `test-bucket` bucket to see the newly 
+   created S3 bucket or list the bucket and it's content by executing the following 
+   command -
    
         aws --endpoint-url=http://localhost:4566 s3 ls s3://test-bucket
 
-4. You can optionally delete the LocalStack docker container. Run:
+3. You can optionally delete the LocalStack docker container. Run:
 
         docker-compose -f ./docker-compose-localstack.yml down --volumes --remove-orphans
 
-### Step-8: To build a Spark application within Kubernetes cluster reading data from AWS S3
+### Step-9: To build a Spark application reading data from AWS S3
+This step builds a Spark application that reads a file from stored in S3 bucket and 
+calcuates the word count. 
 
-## To be continued ... Not done yet ....
+1. The Scala project source code for a Spark application that reads a file stored 
+   in S3 bucket and performs word count is available at 
+   `[spark-kubernetes-aws folder]/spark-example`.
+   
+2. The Spark project is configured (using `build.sbt`) to use SBT to compile and build 
+   the application JAR. However, other build tool such as Maven can be used to compile
+   and build application JAR. Please execute following `sbt` commands to build 
+   application JAR. PLease note: it builds a FAT JAR that includes all dependencies 
+   except Spark dependencies. Spark dependencies are provided by the Spark docker 
+   image used to run Spark application within Kubernetes cluster.
+   
+         cd [spark-kubernetes-aws folder]/spark-example
+         sbt assembly
+   
+         # The output JAR spark-example-assembly-0.1.jar is created at [spark-kubernetes-aws folder]/spark-example/target/scala-2.12/
+
+### Step-10: To deploy the WordCount Spark application
+This step deploys the Spark application and dependency jars to S3 in order to be 
+accessible from Kubernetes cluster.
+
+1. Deploy the application JAR
+
+         cd [spark-kubernetes-aws folder]/spark-example
+         aws --endpoint-url=http://localhost:4566 s3 cp spark-example/target/scala-2.12/spark-example-assembly-0.1.jar s3://test-bucket
+
+2. Deploy the AWS dependency JARs. This appplication reads data from AWS S3 bucket. 
+   Therefore, it needs `aws-java-sdk-bundle` (https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-bundle) 
+   and `hadoop-aws` (https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-aws) 
+   dependencies because these are not part of Spark distribution. You can download these 
+   jars from Maven repository to your local machine. However, these jars are available
+   at `[spark-kubernetes-aws folder]/spark-example/aws-jars` folder. To deploy, run:
+   
+         cd [spark-kubernetes-aws folder]
+         aws --endpoint-url=http://localhost:4566 s3 cp spark-example/aws-jars/aws-java-sdk-bundle-1.11.874.jar s3://test-bucket
+         aws --endpoint-url=http://localhost:4566 s3 cp spark-example/aws-jars/hadoop-aws-3.2.0.jar s3://test-bucket
+   
+#### Notes:
+
+1. Please note that the application jar and AWS dependency jars are deployed to the 
+   `test-bucket` S3 bucket created in step-8. You can list the content of `test-bucket` 
+   to check the presence of application jar and AWS dependency jars by executing -
+   
+         aws --endpoint-url=http://localhost:4566 s3 ls s3://test-bucket
+
+### Step-11: To run the WordCount Spark application
+This steps run the Spark application within Kubernetes cluster that reads the input data
+from file stored in AWS S3 bucket.
+
+1. Deploy any text file to the `test-bucket` S3 bucket. The Scala source code is designed
+   to read a file at `s3a://test-bucket/Vagrantfile`. You can change it by editing the 
+   `[spark-kubernetes-aws folder]/spark-example/src/main/scala/com/datalogs/WordCount.scala` 
+   Scala source code file. To copy the Vagrantfile to S3 bucket, please run:
+
+         cd [spark-kubernetes-aws folder]
+         aws --endpoint-url=http://localhost:4566 s3 cp vagrant-kubeadm/Vagrantfile s3://test-bucket
+
+2. Execute the following `spark-submit` command to run the WordCount Spark application within 
+   Kubernetes cluster -
+   
+         spark-submit \
+         --master k8s://https://192.168.26.10:6443 \
+         --deploy-mode cluster \
+         --name word-count \
+         --class com.datalogs.WordCount \
+         --jars=http://192.168.86.231:4566/test-bucket/aws-java-sdk-bundle-1.11.874.jar,http://192.168.86.231:4566/test-bucket/hadoop-aws-3.2.0.jar \
+         --conf spark.driver.cores=1 \
+         --conf spark.driver.memory=512m \
+         --conf spark.executor.cores=1 \
+         --conf spark.executor.instances=1 \
+         --conf spark.executor.memory=512m \
+         --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+         --conf spark.kubernetes.container.image=10.0.2.2:5000/spark \
+         --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+         --conf spark.hadoop.fs.s3a.path.style.access=true \
+         --conf spark.hadoop.fs.s3a.endpoint=http://192.168.86.231:4566 \
+         --conf spark.hadoop.fs.s3a.access.key=123 \
+         --conf spark.hadoop.fs.s3a.secret.key=xyz \
+         http://192.168.86.231:4566/test-bucket/spark-example-assembly-0.1.jar
+
+#### Notes:
+1. The above executed `spark-submit` command will create 1 driver pod and 1 executor
+   pod and 1 driver service to run the `WordCount` job.
+
+2. You can find the driver pod name by executing the following command. The driver
+   pod's naming pattern is `pod/spark-pi-*-driver`.
+
+        kubectl get pods --all-namespaces
+
+3. The output of `WordCount` job is written to the driver pod's log. The logs can be
+   followed by executing the following command. The driver pod's log prints `Total number 
+   of words = 465` as successful output.
+
+        kubectl logs [driver-pod-name] --follow
+
+4. The Spark job will remove the executor pod(s) at the end of the job but not the
+   driver pod and service. You can remove these resources by executing the following
+   commands -
+
+        kubectl delete [driver-pod-name] [driver-service-name]
+
+
+## That's it ... Hopefully, you should be now able to continue your Kubernetes/Spark/AWS development in local machine (Laptop) !!!
