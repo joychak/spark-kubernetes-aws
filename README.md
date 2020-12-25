@@ -22,7 +22,7 @@ and cloud resources.
 
 ## Environment Setup and Testing Steps
 
-### Step-1. Clone this repository to you local machine
+### Step-1. Clone this repository to your local machine
 Run:
    
       git clone https://github.com/joychak/spark-kubernetes-aws.git
